@@ -5,6 +5,9 @@ import hashlib
 import pymysql.cursors
 from functools import wraps
 import time
+import hashlib
+
+SALT = 'cs3083'
 
 app = Flask(__name__)
 app.secret_key = "super secret key"
@@ -71,8 +74,8 @@ def loginAuth():
     if request.form:
         requestData = request.form
         username = requestData["username"]
-        plaintextPasword = requestData["password"]
-        hashedPassword = hashlib.sha256(plaintextPasword.encode("utf-8")).hexdigest()
+        password = requestData["password"] + SALT
+        hashedPassword = hashlib.sha256(password.encode("utf-8")).hexdigest()
 
         with connection.cursor() as cursor:
             query = "SELECT * FROM person WHERE username = %s AND password = %s"
@@ -84,7 +87,6 @@ def loginAuth():
 
         error = "Incorrect username or password."
         return render_template("login.html", error=error)
-
     error = "An unknown error has occurred. Please try again."
     return render_template("login.html", error=error)
 
@@ -93,11 +95,10 @@ def registerAuth():
     if request.form:
         requestData = request.form
         username = requestData["username"]
-        plaintextPasword = requestData["password"]
-        hashedPassword = hashlib.sha256(plaintextPasword.encode("utf-8")).hexdigest()
+        password = requestData["password"] + SALT
+        hashedPassword = hashlib.sha256(password.encode("utf-8")).hexdigest()
         firstName = requestData["fname"]
         lastName = requestData["lname"]
-        
         try:
             with connection.cursor() as cursor:
                 query = "INSERT INTO person (username, password, fname, lname) VALUES (%s, %s, %s, %s)"
@@ -105,9 +106,9 @@ def registerAuth():
         except pymysql.err.IntegrityError:
             error = "%s is already taken." % (username)
             return render_template('register.html', error=error)    
-
+        print("sucess")
         return redirect(url_for("login"))
-
+    print("fail")
     error = "An error has occurred. Please try again."
     return render_template("register.html", error=error)
 
@@ -136,5 +137,4 @@ def upload_image():
 if __name__ == "__main__":
     if not os.path.isdir("images"):
         os.mkdir(IMAGES_DIR)
-    print("About to run...")
-    app.run(a)
+    app.run()
