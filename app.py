@@ -12,10 +12,10 @@ IMAGES_DIR = os.path.join(os.getcwd(), "images")
 
 connection = pymysql.connect(host="localhost",
                              user="root",
-                             password="",
+                             password="root",
                              db="finsta",
                              charset="utf8mb4",
-                             port=3306,
+                             port=8889,
                              cursorclass=pymysql.cursors.DictCursor,
                              autocommit=True)
 
@@ -136,4 +136,5 @@ def upload_image():
 if __name__ == "__main__":
     if not os.path.isdir("images"):
         os.mkdir(IMAGES_DIR)
-    app.run()
+    print("About to run...")
+    app.run(a)
