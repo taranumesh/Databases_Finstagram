@@ -4,8 +4,8 @@
 <body>
 <form action="/uploadImage" method="POST">
 	<h1>Welcome {{username}}</h1> 
-	<input type="file" name = "imageToUpload"></br>
-	<input type="text" name = "caption" placeholder="post" required/> </br>
+	<input type="file" name = "imageToUpload" accept="image/*"></br>
+	<input type="text" name = "caption" placeholder="caption" required/> </br>
 	<input type="submit" value = Post />
 </form>
 
