@@ -49,11 +49,23 @@ def upload():
 @app.route("/images", methods=["GET"])
 @login_required
 def images():
-    query = "SELECT * FROM photo"
-    with connection.cursor() as cursor:
-        cursor.execute(query)
-    data = cursor.fetchall()
-    return render_template("images.html", images=data)
+	user = session["username"]
+	cursor = conn.cursor()
+	followerPhotos = "CREATE VIEW follower_photos AS SELECT photoID, photoPoster FROM Photo JOIN Follow ON (PhotoPoster=username_followed) WHERE username_follower=%s AND allFollowers=1 ORDER BY timestamp DESC"
+	cursor.execute(followerPhotos, (user))
+	data = cursor.fetchall()
+	cursor.close()
+
+	cursor.conn.cursor()
+	dropview = "DROP VIEW follower_photos"
+	cursor.execute(dropview)
+	cursor.close()
+
+	return render_template("images.html", images=data)
+    # query = "SELECT * FROM photo"
+    # with connection.cursor() as cursor:
+    #     cursor.execute(query)
+    # data = cursor.fetchall()
 
 @app.route("/image/<image_name>", methods=["GET"])
 def image(image_name):
@@ -97,11 +109,11 @@ def registerAuth():
         username = requestData["username"]
         password = requestData["password"] + SALT
         hashedPassword = hashlib.sha256(password.encode("utf-8")).hexdigest()
-        firstName = requestData["fname"]
-        lastName = requestData["lname"]
+        firstName = requestData["firstName"]
+        lastName = requestData["lastName"]
         try:
             with connection.cursor() as cursor:
-                query = "INSERT INTO person (username, password, fname, lname) VALUES (%s, %s, %s, %s)"
+                query = "INSERT INTO person (username, password, firstName, lastName) VALUES (%s, %s, %s, %s)"
                 cursor.execute(query, (username, hashedPassword, firstName, lastName))
         except pymysql.err.IntegrityError:
             error = "%s is already taken." % (username)
@@ -125,9 +137,11 @@ def upload_image():
         image_name = image_file.filename
         filepath = os.path.join(IMAGES_DIR, image_name)
         image_file.save(filepath)
-        query = "INSERT INTO photo (timestamp, filePath) VALUES (%s, %s)"
+        caption = request.form["caption"]
+        photoPoster = session["username"]
+        query = "INSERT INTO photo (PhotoID, postingdate, filepath, allFollowers, caption, photoPoster) VALUES (%s, %s, %s, %s, %s, %s)"
         with connection.cursor() as cursor:
-            cursor.execute(query, (time.strftime('%Y-%m-%d %H:%M:%S'), image_name))
+            cursor.execute(query, (12, time.strftime('%Y-%m-%d %H:%M:%S'), image_name, 1, caption, photoPoster))
         message = "Image has been successfully uploaded."
         return render_template("upload.html", message=message)
     else:
