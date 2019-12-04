@@ -10,8 +10,8 @@ import hashlib
 SALT = 'cs3083'
 
 #***
-UPLOAD_FOLDER = '/Users/dannyalcedo/PycharmProjects/finstagram/uploads'
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
+# UPLOAD_FOLDER = '/Users/dannyalcedo/PycharmProjects/finstagram/uploads'
+# ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 #**
 
 app = Flask(__name__)
@@ -19,7 +19,7 @@ app.secret_key = "super secret key"
 
 #***
 IMAGES_DIR = os.path.join(os.getcwd(), "images")
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 #***
 
 connection = pymysql.connect(host="localhost",
@@ -145,13 +145,17 @@ def upload_image():
         image_file = request.files.get("imageToUpload", "")
         image_name = image_file.filename
         filepath = os.path.join(IMAGES_DIR, image_name)
-        image_file.save(filepath)
+        # image_file.save(filepath)
+        print(filepath)
+        with open(filepath, 'rb') as file:
+        	binaryData = file.read()
+       		print("this worked")
         caption = request.form["caption"]
         allfollowers = request.form["allFollowers"]
         photoPoster = session["username"]
-        query = "INSERT INTO photo (PhotoID, postingdate, filepath, allFollowers, caption, photoPoster) VALUES (%s, %s, %s, %s, %s, %s)"
+        query = "INSERT INTO photo (PhotoID, postingdate, file, allFollowers, caption, photoPoster) VALUES (%s, %s, %s, %s, %s, %s)"
         with connection.cursor() as cursor:
-            cursor.execute(query, (1, time.strftime('%Y-%m-%d %H:%M:%S'), filepath, allfollowers, caption, photoPoster))
+            cursor.execute(query, (1, time.strftime('%Y-%m-%d %H:%M:%S'), binaryData, allfollowers, caption, photoPoster))
         message = "Image has been successfully uploaded."
         return render_template("upload.html", message=message)
 

@@ -22,7 +22,7 @@ CREATE TABLE Friendgroup(
 CREATE TABLE Photo (
     photoID int AUTO_INCREMENT, 
     postingdate DATETIME,
-    filepath VARCHAR(100),
+    file MEDIUMBLOB NOT NULL,
     allFollowers VARCHAR(20),
     caption VARCHAR(100),
     photoPoster VARCHAR(20),
