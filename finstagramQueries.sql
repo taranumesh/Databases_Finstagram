@@ -23,7 +23,7 @@ CREATE TABLE Photo (
     photoID int AUTO_INCREMENT, 
     postingdate DATETIME,
     filepath VARCHAR(100),
-    allFollowers Boolean,
+    allFollowers VARCHAR(20),
     caption VARCHAR(100),
     photoPoster VARCHAR(20),
     PRIMARY KEY (photoID),

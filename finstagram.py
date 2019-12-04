@@ -9,14 +9,23 @@ import hashlib
 
 SALT = 'cs3083'
 
+#***
+UPLOAD_FOLDER = '/Users/dannyalcedo/PycharmProjects/finstagram/uploads'
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
+#**
+
 app = Flask(__name__)
 app.secret_key = "super secret key"
+
+#***
 IMAGES_DIR = os.path.join(os.getcwd(), "images")
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+#***
 
 connection = pymysql.connect(host="localhost",
                              user="root",
                              password="root",
-                             db="finsta",
+                             db="finstagram",
                              charset="utf8mb4",
                              port=8889,
                              cursorclass=pymysql.cursors.DictCursor,
@@ -50,7 +59,7 @@ def upload():
 @login_required
 def images():
 	user = session["username"]
-	cursor = conn.cursor()
+	cursor = connection.cursor()
 	followerPhotos = "CREATE VIEW follower_photos AS SELECT photoID, photoPoster FROM Photo JOIN Follow ON (PhotoPoster=username_followed) WHERE username_follower=%s AND allFollowers=1 ORDER BY timestamp DESC"
 	cursor.execute(followerPhotos, (user))
 	data = cursor.fetchall()
@@ -138,12 +147,14 @@ def upload_image():
         filepath = os.path.join(IMAGES_DIR, image_name)
         image_file.save(filepath)
         caption = request.form["caption"]
+        allfollowers = request.form["allFollowers"]
         photoPoster = session["username"]
         query = "INSERT INTO photo (PhotoID, postingdate, filepath, allFollowers, caption, photoPoster) VALUES (%s, %s, %s, %s, %s, %s)"
         with connection.cursor() as cursor:
-            cursor.execute(query, (12, time.strftime('%Y-%m-%d %H:%M:%S'), image_name, 1, caption, photoPoster))
+            cursor.execute(query, (1, time.strftime('%Y-%m-%d %H:%M:%S'), filepath, allfollowers, caption, photoPoster))
         message = "Image has been successfully uploaded."
         return render_template("upload.html", message=message)
+
     else:
         message = "Failed to upload image."
         return render_template("upload.html", message=message)
