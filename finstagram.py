@@ -50,8 +50,8 @@ def index():
 def home():
     user = session["username"]
     cursor = connection.cursor()
-    followerPhotos = "SELECT PhotoID, file, photoPoster, caption, postingDate FROM Photo JOIN Follow ON (PhotoPoster=username_followed) WHERE username_follower=%s AND allFollowers='true' ORDER BY postingDate DESC"
-    cursor.execute(followerPhotos, (user))
+    followerPhotos = "SELECT PhotoID, file, photoPoster, caption, postingDate FROM Photo JOIN Follow ON (PhotoPoster=username_followed) WHERE (username_follower=%s OR PhotoPoster=%s) AND allFollowers='true' ORDER BY postingDate DESC"
+    cursor.execute(followerPhotos, (user, user))
     data = cursor.fetchall()
     cursor.close()
     return render_template("home.html", username=session["username"], images=data)
@@ -151,22 +151,22 @@ def upload_image():
         image_file = request.files.get("imageToUpload", "")
         image_name = image_file.filename
         filepath = os.path.join(IMAGES_DIR, image_name)
-        # image_file.save(filepath)
+        image_file.save(filepath)
         print(filepath)
         with open(filepath, 'rb') as file:
         	binaryData = file.read()
-       		print("this worked")
         caption = request.form["caption"]
         allfollowers = request.form["allFollowers"]
         photoPoster = session["username"]
         # Get the last posted PhotoID and increment
-        # cursor = connection.cursor()
-        # cursor.execute("SELECT MAX(PhotoID) FROM Photo")
-        # photoID_max = cursor.fetchall()
-
+        cursor = connection.cursor()
+        cursor.execute("SELECT MAX(PhotoID) FROM Photo")
+        photoID_max = cursor.fetchall()
+        photoID = photoID_max[0]["MAX(PhotoID)"] + 1
+        cursor.close()
         query = "INSERT INTO photo (PhotoID, postingDate, file, allFollowers, caption, photoPoster) VALUES (%s, %s, %s, %s, %s, %s)"
         with connection.cursor() as cursor:
-            cursor.execute(query, (1, time.strftime('%Y-%m-%d %H:%M:%S'), binaryData, allfollowers, caption, photoPoster))
+            cursor.execute(query, (photoID, time.strftime('%Y-%m-%d %H:%M:%S'), binaryData, allfollowers, caption, photoPoster))
         message = "Image has been successfully uploaded."
         return render_template("upload.html", message=message)
 
