@@ -48,29 +48,36 @@ def index():
 @app.route("/home")
 @login_required
 def home():
-    return render_template("home.html", username=session["username"])
+    user = session["username"]
+    cursor = connection.cursor()
+    followerPhotos = "SELECT PhotoID, file, photoPoster, caption, postingDate FROM Photo JOIN Follow ON (PhotoPoster=username_followed) WHERE username_follower=%s AND allFollowers='true' ORDER BY postingDate DESC"
+    cursor.execute(followerPhotos, (user))
+    data = cursor.fetchall()
+    cursor.close()
+
+    return render_template("home.html", username=session["username"], images=data)
 
 @app.route("/upload", methods=["GET"])
 @login_required
 def upload():
     return render_template("upload.html")
 
-@app.route("/images", methods=["GET"])
-@login_required
-def images():
-	user = session["username"]
-	cursor = connection.cursor()
-	followerPhotos = "CREATE VIEW follower_photos AS SELECT photoID, photoPoster FROM Photo JOIN Follow ON (PhotoPoster=username_followed) WHERE username_follower=%s AND allFollowers=1 ORDER BY timestamp DESC"
-	cursor.execute(followerPhotos, (user))
-	data = cursor.fetchall()
-	cursor.close()
+# @app.route("/images", methods=["GET"])
+# @login_required
+# def images():
+	# user = session["username"]
+	# cursor = connection.cursor()
+	# followerPhotos = "CREATE VIEW follower_photos AS SELECT photoID, photoPoster FROM Photo JOIN Follow ON (PhotoPoster=username_followed) WHERE username_follower=%s AND allFollowers=1 ORDER BY timestamp DESC"
+	# cursor.execute(followerPhotos, (user))
+	# data = cursor.fetchall()
+	# cursor.close()
 
-	cursor.conn.cursor()
-	dropview = "DROP VIEW follower_photos"
-	cursor.execute(dropview)
-	cursor.close()
+	# cursor.conn.cursor()
+	# dropview = "DROP VIEW follower_photos"
+	# cursor.execute(dropview)
+	# cursor.close()
 
-	return render_template("images.html", images=data)
+	# return render_template("images.html", images=data)
     # query = "SELECT * FROM photo"
     # with connection.cursor() as cursor:
     #     cursor.execute(query)
@@ -153,7 +160,7 @@ def upload_image():
         caption = request.form["caption"]
         allfollowers = request.form["allFollowers"]
         photoPoster = session["username"]
-        query = "INSERT INTO photo (PhotoID, postingdate, file, allFollowers, caption, photoPoster) VALUES (%s, %s, %s, %s, %s, %s)"
+        query = "INSERT INTO photo (PhotoID, postingDate, file, allFollowers, caption, photoPoster) VALUES (%s, %s, %s, %s, %s, %s)"
         with connection.cursor() as cursor:
             cursor.execute(query, (1, time.strftime('%Y-%m-%d %H:%M:%S'), binaryData, allfollowers, caption, photoPoster))
         message = "Image has been successfully uploaded."

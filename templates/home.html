@@ -17,19 +17,15 @@
 	}
 </style>
 
-Here are your posts:
-
-<table>
-	<th>Time</th>
-	<th>Post</th>
-
-{% for line in posts %}
-	<tr>
-		<td>{{line.ts}}</td>
-		<td>{{line.blog_post}}</td>
-	</tr>
+<h2>Feed</h2>
+<div>
+{% for image in images %}
+        <img src="file:image/jpg;base64,'.base64_encode($blob).'"width='300'><br>
+        <h4><b>@{{image.photoPoster}}</b> <i><{{image.caption}}</i> </h4>
+        <h6>PhotoID: {{image.PhotoID}} </h6>
+        <h6>{{image.postingDate}}</h6>
 {% endfor %}
-</table>
+</div>
 
 <a href="/select_blogger">Select a blogger</a>
 <br>
