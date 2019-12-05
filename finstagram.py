@@ -54,7 +54,6 @@ def home():
     cursor.execute(followerPhotos, (user))
     data = cursor.fetchall()
     cursor.close()
-
     return render_template("home.html", username=session["username"], images=data)
 
 @app.route("/upload", methods=["GET"])
@@ -160,6 +159,11 @@ def upload_image():
         caption = request.form["caption"]
         allfollowers = request.form["allFollowers"]
         photoPoster = session["username"]
+        # Get the last posted PhotoID and increment
+        # cursor = connection.cursor()
+        # cursor.execute("SELECT MAX(PhotoID) FROM Photo")
+        # photoID_max = cursor.fetchall()
+
         query = "INSERT INTO photo (PhotoID, postingDate, file, allFollowers, caption, photoPoster) VALUES (%s, %s, %s, %s, %s, %s)"
         with connection.cursor() as cursor:
             cursor.execute(query, (1, time.strftime('%Y-%m-%d %H:%M:%S'), binaryData, allfollowers, caption, photoPoster))
@@ -169,6 +173,25 @@ def upload_image():
     else:
         message = "Failed to upload image."
         return render_template("upload.html", message=message)
+
+@app.route("/search", methods=["POST"])
+@login_required
+def search_user():
+    if request.form:
+        requestData = request.form
+        username = requestData["searchbar"]
+        cursor = connection.cursor()
+        userPhotos = "SELECT PhotoID, file, photoPoster, caption, postingDate FROM Photo WHERE photoPoster=%s AND allFollowers='true' ORDER BY postingDate DESC"
+        cursor.execute(userPhotos, (username))
+        data = cursor.fetchall()
+        cursor.close()
+        if (data == ()):
+            message = "No user found with username: @" + username
+        else:
+            message = "@" + username + " Posts"
+        return render_template("search.html", images=data, message=message)
+    else:
+        return render_template("search.html", message="Error")
 
 if __name__ == "__main__":
     if not os.path.isdir("images"):

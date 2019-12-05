@@ -1,0 +1,25 @@
+<html>
+<head>
+</head>
+<body>
+<h2>{{message}}</h2>
+<a href="/home">Home</a>
+
+{% for image in images %}
+		<div>
+	        <h4><b>@{{image.photoPoster}}</b> <i>{{image.caption}}</i></h4>
+	        <h6>PhotoID: {{image.PhotoID}} </h6>
+	        <h6>{{image.postingDate}}</h6>
+    	</div>
+{% endfor %}
+
+<style type="text/css">
+	div{
+		border: 1px solid black;
+	}
+</style>
+
+</body>
+
+
+</html>

@@ -2,30 +2,39 @@
 <head>
 </head>
 <body>
+<div>
 <form action="/uploadImage" method="POST" enctype = "multipart/form-data">
 	<h1>Welcome {{username}}</h1>
 	<input type="file" name = "imageToUpload" accept = "image/*"/> </br>
 	<input type="text" name = "caption" placeholder="caption" required/> </br>
-    <input type="checkbox" name = "allFollowers" value = 'true'/> share with all followers? </br>
-    <input type="checkbox" name = "allFollowers" value = 'false'/> do not share with all followers? </br>
+	<input type="checkbox" name = "allFollowers" value = 'true'/> share with all followers? </br>
+	<input type="checkbox" name = "allFollowers" value = 'false'/> do not share with all followers? </br>
 	<input type="submit" value = Post />
 </form>
-
+</div>
+<div>
+<form action="/search" method="POST" enctype = "multipart/form-data">
+	<h2>Search Users</h2>
+	<input type="text" name = "searchbar" placeholder="Username" required/> </br>
+	<input type="submit" value = Search>
+</form>
+</div>
 <style type="text/css">
-	table, th, td{
+	div{
 		border: 1px solid black;
 	}
 </style>
 
 <h2>Feed</h2>
-<div>
+
 {% for image in images %}
-        <img src="file:image/jpg;base64,'.base64_encode($blob).'"width='300'><br>
-        <h4><b>@{{image.photoPoster}}</b> <i><{{image.caption}}</i> </h4>
+	<div>        
+		<h4><b>@{{image.photoPoster}}</b> <i>{{image.caption}}</i></h4>
         <h6>PhotoID: {{image.PhotoID}} </h6>
         <h6>{{image.postingDate}}</h6>
+    </div>
 {% endfor %}
-</div>
+
 
 <a href="/select_blogger">Select a blogger</a>
 <br>
