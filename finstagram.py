@@ -193,6 +193,62 @@ def search_user():
     else:
         return render_template("search.html", message="Error")
 
+@app.route("/groups", methods=["GET"])
+@login_required
+def groups():
+    return render_template("groups.html")
+
+@app.route("/creategroup", methods=["POST"])
+@login_required
+def create_group():
+    if request.form:
+        requestData = request.form
+        username = session["username"]
+        groupname = requestData["groupname"]
+        description = requestData["description"]
+        group = "SELECT * FROM FriendGroup WHERE groupName=%s AND groupOwner=%s"
+        cursor = connection.cursor()
+        cursor.execute(group, (groupname, username))
+        data = cursor.fetchone()
+        cursor.close()
+        if data:
+            message = "Group Already Exists"
+        else:
+            message = "New Group "+groupname+" Added"
+            addGroup = "INSERT INTO FriendGroup (groupOwner, groupName, description) VALUES (%s,%s,%s)"
+            cursor = connection.cursor()
+            cursor.execute(addGroup, (username, groupname, description))
+            cursor.close()
+    else:
+        mesage = "Error occured creating group."
+    return render_template("groups.html", message=message)
+
+@app.route("/addgroupmember", methods=["POST"])
+@login_required
+def add_user():
+    if request.form:
+        requestData = request.form
+        username = session["username"]
+        groupname = requestData["groupname"]
+        adduser = requestData["adduser"]
+        group = "SELECT * FROM FriendGroup WHERE groupName=%s AND groupOwner=%s"
+        cursor = connection.cursor()
+        cursor.execute(group, (groupname, username))
+        data = cursor.fetchone()
+        cursor.close()
+        if data:
+            message = "User "+adduser+" Added to "+groupname
+            addUser = "INSERT INTO BelongTo (member_username, owner_username, groupName) VALUES (%s,%s,%s)"
+            cursor = connection.cursor()
+            cursor.execute(addUser, (adduser, username, groupname))
+            cursor.close()
+        else:
+            message = "Group Does Not Exist"
+    else:
+        mesage = "Error occured creating group."
+    return render_template("groups.html", message=message)
+
+
 if __name__ == "__main__":
     if not os.path.isdir("images"):
         os.mkdir(IMAGES_DIR)

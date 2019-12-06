@@ -2,9 +2,11 @@
 <head>
 </head>
 <body>
+<h1>Welcome @{{username}}</h1>
+<div id="Sidebar">
 <div>
 <form action="/uploadImage" method="POST" enctype = "multipart/form-data">
-	<h1>Welcome {{username}}</h1>
+	<h2>Share a Post</h2>
 	<input type="file" name = "imageToUpload" accept = "image/*"/> </br>
 	<input type="text" name = "caption" placeholder="caption" required/> </br>
 	<input type="checkbox" name = "allFollowers" value = 'true'/> share with all followers? </br>
@@ -19,26 +21,46 @@
 	<input type="submit" value = Search>
 </form>
 </div>
+<a href="/groups">Groups</a>
+<a href="/logout">Logout</a>
+</div>
 <style type="text/css">
 	div{
 		border: 1px solid black;
+		margin-bottom: 5px;
+		padding-left: 5px;
+		padding-right: 5px;
 	}
-</style>
 
+	#Sidebar {
+		width: 30%;
+		float: left;
+		border: none;
+		position: fixed;
+	}
+
+	#Feed {
+		width: 66%;
+		float: right;
+		padding-left: 5px;
+		padding-right: 5px;
+	}
+
+</style>
+<div id="Feed">
 <h2>Feed</h2>
 
 {% for image in images %}
-	<div>        
+	<div id="Post">        
 		<h4><b>@{{image.photoPoster}}</b> <i>{{image.caption}}</i></h4>
         <h6>PhotoID: {{image.PhotoID}} </h6>
         <h6>{{image.postingDate}}</h6>
     </div>
 {% endfor %}
+</div>
 
-
-<a href="/select_blogger">Select a blogger</a>
 <br>
-<a href="/logout">Logout</a>
+
 
 </body>
 
