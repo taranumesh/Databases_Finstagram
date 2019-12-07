@@ -18,7 +18,14 @@
 <form action="/search" method="POST" enctype = "multipart/form-data">
 	<h2>Search Users</h2>
 	<input type="text" name = "searchbar" placeholder="Username" required/> </br>
-	<input type="submit" value = Search>
+	<input type="submit" value = "Search"/>
+</form>
+<form action="/follow" method="POST" enctype = "multipart/form-data">
+	<h2>Follow User</h2>
+	<input type="text" name="followuser" placeholder="Username" required/> </br>
+	<input type="radio" name="follow" value="Follow" checked/> Follow </br>
+	<input type="radio" name="follow" value="Unfollow"/> Unfollow </br>
+	<input type="submit" value = "Follow/Unfollow"/>
 </form>
 </div>
 <a href="/groups">Groups</a>

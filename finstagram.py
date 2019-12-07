@@ -52,7 +52,7 @@ def home():
     
     # Get photos from people you follow
     cursor = connection.cursor()
-    followerPhotos = "CREATE VIEW followerPhotos AS SELECT DISTINCT PhotoID, file, photoPoster, caption, postingDate FROM Photo JOIN Follow ON (PhotoPoster=username_followed) WHERE username_follower=%s AND allFollowers=1"
+    followerPhotos = "CREATE VIEW followerPhotos AS SELECT DISTINCT PhotoID, file, photoPoster, caption, postingDate FROM Photo JOIN Follow ON (PhotoPoster=username_followed) WHERE username_follower=%s AND allFollowers='true'"
     cursor.execute(followerPhotos, (user))
     cursor.close()
 
@@ -70,7 +70,7 @@ def home():
 
     # Get all feed posts
     cursor = connection.cursor()
-    feed = "SELECT DISTINCT * FROM followerPhotos UNION (SELECT * FROM myPhotos) UNION (SELECT * FROM groupPhotos)"
+    feed = "SELECT DISTINCT * FROM followerPhotos UNION (SELECT * FROM myPhotos) UNION (SELECT * FROM groupPhotos) ORDER BY postingDate DESC"
     cursor.execute(feed)
     data = cursor.fetchall()
     cursor = connection.cursor()
@@ -80,7 +80,7 @@ def home():
     query = "DROP VIEW followerPhotos, myPhotos, groupPhotos"
     cursor.execute(query)
     cursor.close()
-    return render_template("home.html", username=session["username"], images=data)
+    return render_template("home.html", username=session["username"], images=data, message="")
 
 @app.route("/upload", methods=["GET"])
 @login_required
@@ -188,7 +188,7 @@ def upload_image():
         cursor = connection.cursor()
         cursor.execute("SELECT MAX(PhotoID) FROM Photo")
         photoID_max = cursor.fetchall()
-        if photoID_max[0]["MAX(PhotoID)"] is not None:
+        if (photoID_max[0]["MAX(PhotoID)"] != ()):
             photoID = photoID_max[0]["MAX(PhotoID)"] + 1
         else:
             photoID = 1;
@@ -280,7 +280,46 @@ def add_user():
     else:
         mesage = "Error occured creating group."
     return render_template("groups.html", message=message)
-
+@app.route("/follow", methods=["POST"])
+@login_required
+def follow_unfollow():
+    if request.form:
+        requestData = request.form
+        username = session["username"]
+        follow_user = requestData["followuser"]
+        follow = requestData["follow"]
+        cursor = connection.cursor()
+        query = "SELECT * FROM Person WHERE username=%s"
+        cursor.execute(query, (follow_user))
+        user_exists = cursor.fetchall()
+        cursor.close()
+        if (user_exists != ()):
+            if (follow == "Follow"):
+                cursor = connection.cursor()
+                query = "SELECT * FROM Follow WHERE username_followed=%s AND username_follower=%s"
+                cursor.execute(query, (follow_user, username))
+                user_follows = cursor.fetchall()
+                cursor.close()
+                print(user_follows)
+                if (user_follows==()):
+                    cursor = connection.cursor()
+                    query = "INSERT INTO Follow (username_followed, username_follower, followstatus) VALUES (%s, %s, 1)"
+                    cursor.execute(query, (follow_user, username))
+                    cursor.close()
+                    message = "Followed @"+follow_user
+                else:
+                    message = "Already following @"+follow_user
+            elif (follow == "Unfollow"):
+                cursor = connection.cursor()
+                query = "DELETE FROM Follow WHERE username_followed=%s AND username_follower=%s"
+                cursor.execute(query, (follow_user, username))
+                cursor.close()
+                message = "Unfollowed @"+follow_user
+        else:
+            message = "@"+follow_user+" not found"
+    else:
+        message = "Error!"
+    return render_template("follow.html", message=message)
 
 if __name__ == "__main__":
     if not os.path.isdir("images"):
