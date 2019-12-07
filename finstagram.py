@@ -49,10 +49,36 @@ def index():
 @login_required
 def home():
     user = session["username"]
+    
+    # Get photos from people you follow
     cursor = connection.cursor()
-    followerPhotos = "SELECT PhotoID, file, photoPoster, caption, postingDate FROM Photo JOIN Follow ON (PhotoPoster=username_followed) WHERE (username_follower=%s OR PhotoPoster=%s) AND allFollowers='true' ORDER BY postingDate DESC"
-    cursor.execute(followerPhotos, (user, user))
+    followerPhotos = "CREATE VIEW followerPhotos AS SELECT DISTINCT PhotoID, file, photoPoster, caption, postingDate FROM Photo JOIN Follow ON (PhotoPoster=username_followed) WHERE username_follower=%s AND allFollowers=1"
+    cursor.execute(followerPhotos, (user))
+    cursor.close()
+
+    # Get your own photos
+    cursor = connection.cursor()
+    myPhotos = "CREATE VIEW myPhotos AS SELECT PhotoID, file, photoPoster, caption, postingDate FROM Photo WHERE photoPoster=%s"
+    cursor.execute(myPhotos, (user))
+    cursor.close()
+
+    # Get photos from the group
+    cursor = connection.cursor()
+    groupPhotos = "CREATE VIEW groupPhotos AS SELECT DISTINCT PhotoID, file, photoPoster, caption, postingDate FROM Photo JOIN BelongTo as b1 ON (member_username = photoPoster) WHERE EXISTS (SELECT member_username FROM BelongTo WHERE groupName=b1.groupName AND member_username=%s)"
+    cursor.execute(groupPhotos, (user))
+    cursor.close()
+
+    # Get all feed posts
+    cursor = connection.cursor()
+    feed = "SELECT DISTINCT * FROM followerPhotos UNION (SELECT * FROM myPhotos) UNION (SELECT * FROM groupPhotos)"
+    cursor.execute(feed)
     data = cursor.fetchall()
+    cursor = connection.cursor()
+
+    # Drop all views
+    cursor = connection.cursor()
+    query = "DROP VIEW followerPhotos, myPhotos, groupPhotos"
+    cursor.execute(query)
     cursor.close()
     return render_template("home.html", username=session["username"], images=data)
 
@@ -162,7 +188,10 @@ def upload_image():
         cursor = connection.cursor()
         cursor.execute("SELECT MAX(PhotoID) FROM Photo")
         photoID_max = cursor.fetchall()
-        photoID = photoID_max[0]["MAX(PhotoID)"] + 1
+        if photoID_max[0]["MAX(PhotoID)"] is not None:
+            photoID = photoID_max[0]["MAX(PhotoID)"] + 1
+        else:
+            photoID = 1;
         cursor.close()
         query = "INSERT INTO photo (PhotoID, postingDate, file, allFollowers, caption, photoPoster) VALUES (%s, %s, %s, %s, %s, %s)"
         with connection.cursor() as cursor:
@@ -186,7 +215,7 @@ def search_user():
         data = cursor.fetchall()
         cursor.close()
         if (data == ()):
-            message = "No user found with username: @" + username
+            message = "No posts found from username: @" + username
         else:
             message = "@" + username + " Posts"
         return render_template("search.html", images=data, message=message)
@@ -218,6 +247,10 @@ def create_group():
             addGroup = "INSERT INTO FriendGroup (groupOwner, groupName, description) VALUES (%s,%s,%s)"
             cursor = connection.cursor()
             cursor.execute(addGroup, (username, groupname, description))
+            cursor.close()
+            addGroup = "INSERT INTO BelongTo (member_username, owner_username, groupName) VALUES (%s,%s,%s)"
+            cursor = connection.cursor()
+            cursor.execute(addGroup, (username, username, groupname))
             cursor.close()
     else:
         mesage = "Error occured creating group."
