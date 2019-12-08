@@ -82,6 +82,114 @@ def home():
     cursor.close()
     return render_template("home.html", username=session["username"], images=data, message="")
 
+@app.route("/tag", methods=["POST"])
+@login_required
+def tag():
+    requestData = request.form
+    tagger = session["username"]
+    tagged = requestData["username"]
+    photoid_form = requestData["photoID"]
+    print(photoid_form)
+
+    cursor = connection.cursor()
+    
+    if (tagged == tagger):
+        query = "INSERT INTO Tagged (username, photoID, tagstatus) VALUES (%s, %s, true)"
+        cursor.execute(query, (tagger, photoid_form))
+        cursor.close()
+        message = "You've successfuly tagged yourself"
+    else:
+        #inner if...else to see if tagged can/can't see
+        #if photoid is in table made in "get all feed posts above" then vissible
+        cursor = connection.cursor()
+        followerPhotos = "CREATE VIEW followerPhotos AS SELECT DISTINCT PhotoID, file, photoPoster, caption, postingDate FROM Photo JOIN Follow ON (PhotoPoster=username_followed) WHERE username_follower=%s AND allFollowers='true'"
+        cursor.execute(followerPhotos, (tagged))
+        cursor.close()
+
+        # Get your own photos
+        cursor = connection.cursor()
+        myPhotos = "CREATE VIEW myPhotos AS SELECT PhotoID, file, photoPoster, caption, postingDate FROM Photo WHERE photoPoster=%s"
+        cursor.execute(myPhotos, (tagged))
+        cursor.close()
+
+        # Get photos from the group
+        cursor = connection.cursor()
+        groupPhotos = "CREATE VIEW groupPhotos AS SELECT DISTINCT PhotoID, file, photoPoster, caption, postingDate FROM Photo JOIN BelongTo as b1 ON (member_username = photoPoster) WHERE EXISTS (SELECT member_username FROM BelongTo WHERE groupName=b1.groupName AND member_username=%s)"
+        cursor.execute(groupPhotos, (tagged))
+        cursor.close()
+
+        # Get all feed posts
+        cursor = connection.cursor()
+        query = "CREATE VIEW taggedFeed AS SELECT PhotoID FROM followerPhotos UNION (SELECT PhotoID FROM myPhotos) UNION (SELECT PhotoID FROM groupPhotos) ORDER BY PhotoID DESC"
+        cursor.execute(query)
+        photos = cursor.fetchall()
+        cursor.close()
+
+        cursor = connection.cursor()
+        query = "SELECT * FROM taggedFeed WHERE PhotoID = %s"
+        cursor.execute(query, (photoid_form))
+        photo = cursor.fetchall()
+        cursor.close()
+
+        # Drop all views
+        cursor = connection.cursor()
+        query = "DROP VIEW followerPhotos, myPhotos, groupPhotos, taggedFeed"
+        cursor.execute(query)
+        cursor.close()
+
+        if (photo == None):
+            message = "User could not be tagged"
+        else:
+            cursor = connection.cursor()
+            query = "INSERT INTO Tagged (username, photoID, tagstatus) VALUES (%s, %s, NULL)"
+            print(photoid_form)
+            print(type(photoid_form))
+            cursor.execute(query, (tagged, photoid_form))
+            cursor.close()
+            #set message to success
+            message = "User was successfuly tagged"
+            return render_template("tagresult.html", message=message)
+
+        # for photo in photos:
+        #     print(photo["PhotoID"])
+        #     print(photoid_form)
+
+        #     ##testing
+        #     print(type(photoid_form))
+        #     print(type(photo["PhotoID"]))
+
+        #     if (type(photoid_form) == int):
+        #         print("photoid_form is a int")
+        #     else:
+        #         print("photoid_form is NOT a int")
+
+        #     if (type(photo["PhotoID"]) == int):
+        #         print("photo['PhotoID'] is a int")
+        #     else:
+        #         print("photo['PhotoID'] is NOT a int")
+        #     ##testing
+
+        #     if (photo["PhotoID"] == photoid_form):
+        #         print("in right if")
+        #         #update table
+        #         cursor = connection.cursor()
+        #         query = "INSERT INTO Tagged (username, photoID, tagstatus) VALUES (%s, %s, NULL)"
+        #         cursor.execute(query, (username, photoid_form))
+        #         cursor.close()
+        #         #set message to success
+        #         message = "User was successfuly tagged"
+        #         return render_template("tagresult.html", message=message)
+        #     else:
+        #         print("in wrong else")
+        #         #set message to error  
+        #         message = "User could not be tagged"              
+
+    #resulting page from tag form
+    # self-tagging: 
+    # tagging where tagged sees
+    # tagging where tagged can't see
+    return render_template("tagresult.html", message=message)
+
 @app.route("/upload", methods=["GET"])
 @login_required
 def upload():
@@ -178,17 +286,17 @@ def upload_image():
         image_name = image_file.filename
         filepath = os.path.join(IMAGES_DIR, image_name)
         image_file.save(filepath)
-        print(filepath)
         with open(filepath, 'rb') as file:
         	binaryData = file.read()
         caption = request.form["caption"]
         allfollowers = request.form["allFollowers"]
         photoPoster = session["username"]
+        
         # Get the last posted PhotoID and increment
         cursor = connection.cursor()
         cursor.execute("SELECT MAX(PhotoID) FROM Photo")
         photoID_max = cursor.fetchall()
-        if (photoID_max[0]["MAX(PhotoID)"] != ()):
+        if (photoID_max[0]["MAX(PhotoID)"] != None):
             photoID = photoID_max[0]["MAX(PhotoID)"] + 1
         else:
             photoID = 1;
@@ -280,6 +388,7 @@ def add_user():
     else:
         mesage = "Error occured creating group."
     return render_template("groups.html", message=message)
+
 @app.route("/follow", methods=["POST"])
 @login_required
 def follow_unfollow():
@@ -303,10 +412,10 @@ def follow_unfollow():
                 print(user_follows)
                 if (user_follows==()):
                     cursor = connection.cursor()
-                    query = "INSERT INTO Follow (username_followed, username_follower, followstatus) VALUES (%s, %s, 1)"
+                    query = "INSERT INTO Follow (username_followed, username_follower, followstatus) VALUES (%s, %s, NULL)"
                     cursor.execute(query, (follow_user, username))
                     cursor.close()
-                    message = "Followed @"+follow_user
+                    message = "Follow request sent to @"+follow_user
                 else:
                     message = "Already following @"+follow_user
             elif (follow == "Unfollow"):
@@ -320,6 +429,64 @@ def follow_unfollow():
     else:
         message = "Error!"
     return render_template("follow.html", message=message)
+
+@app.route("/requests", methods=["GET"])
+@login_required
+def requests():
+    # Get all follow requests
+    cursor = connection.cursor()
+    username = session["username"]
+    query = "SELECT username_follower FROM Follow WHERE username_followed=%s AND followstatus IS NULL"
+    cursor.execute(query, (username))
+    data = cursor.fetchall()
+    cursor = connection.cursor()
+    
+    cursor.close()
+    return render_template("requests.html", requests=data, message="")
+
+@app.route("/respondtorequest", methods=["POST"])
+@login_required
+def follow_request():
+    #I need response 
+    response = request.form["followstatus"]
+    followed = session["username"]
+    
+    #HERE'S THE ISSUE
+    #I NEED DISTINCT FOLLOWER VALUE TO DO QUERY IN IF...ELIF STATEMENTS
+    #
+    #
+    #
+    #
+    #
+    #
+    #
+    query = "SELECT username_follower FROM Follow WHERE username_followed = %s"
+    cursor = connection.cursor()
+    cursor.execute(query, (followed))
+    row = cursor.fetchone()
+    follower = row[0][username_follower]
+    
+    if(response == 'true'):
+        query = "UPDATE Follow SET followstatus = 'true' WHERE username_followed=%s AND username_follower=%s"
+        cursor.execute(query, (followed, follower))
+        connection.commit()
+        cursor.close()
+    elif(response == 'false'):
+        query = "DELETE FROM Follow WHERE username_followed=%s AND username_follower=%s"
+        cursor.execute(query, (followed, follower))
+        connection.commit()
+        cursor.close()
+
+    cursor = connection.cursor()
+    username = session["username"]
+    query = "SELECT username_follower FROM Follow WHERE username_followed=%s AND followstatus IS NULL"
+    cursor.execute(query, (username))
+    data = cursor.fetchall()
+    cursor = connection.cursor()
+    
+    cursor.close()
+    return render_template("requests.html", requests=data, message="")
+
 
 if __name__ == "__main__":
     if not os.path.isdir("images"):

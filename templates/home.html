@@ -2,18 +2,22 @@
 <head>
 </head>
 <body>
+
 <h1>Welcome @{{username}}</h1>
+
 <div id="Sidebar">
 <div>
+
 <form action="/uploadImage" method="POST" enctype = "multipart/form-data">
 	<h2>Share a Post</h2>
 	<input type="file" name = "imageToUpload" accept = "image/*"/> </br>
 	<input type="text" name = "caption" placeholder="caption" required/> </br>
-	<input type="checkbox" name = "allFollowers" value = 'true'/> share with all followers? </br>
-	<input type="checkbox" name = "allFollowers" value = 'false'/> do not share with all followers? </br>
+	<input type="radio" name = "allFollowers" value = 'true'/> share with all followers? </br>
+	<input type="radio" name = "allFollowers" value = 'false'/> do not share with all followers? </br>
 	<input type="submit" value = Post />
 </form>
 </div>
+
 <div>
 <form action="/search" method="POST" enctype = "multipart/form-data">
 	<h2>Search Users</h2>
@@ -28,9 +32,13 @@
 	<input type="submit" value = "Follow/Unfollow"/>
 </form>
 </div>
+
 <a href="/groups">Groups</a>
 <a href="/logout">Logout</a>
+<a href="/requests">Follow Requests</a>
+
 </div>
+
 <style type="text/css">
 	div{
 		border: 1px solid black;
@@ -54,6 +62,7 @@
 	}
 
 </style>
+
 <div id="Feed">
 <h2>Feed</h2>
 
@@ -62,6 +71,11 @@
 		<h4><b>@{{image.photoPoster}}</b> <i>{{image.caption}}</i></h4>
         <h6>PhotoID: {{image.PhotoID}} </h6>
         <h6>{{image.postingDate}}</h6>
+        <form action="/tag" method="POST" enctype = "multipart/form-data">
+			<input type="text" name = "username" placeholder = "tag someone" required/> </br>
+			<input type="hidden" name="photoID" value="{{image.PhotoID}}">
+			<input type="submit" value = "tag"/>
+		</form>
     </div>
 {% endfor %}
 </div>

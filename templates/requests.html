@@ -1,0 +1,22 @@
+<html>
+<head>
+</head>
+<body>
+<a href="/home">Home</a>
+
+<h1> Friend Requests </h1>
+
+{% for request in requests %}
+	<div id="Req">        
+		<h2><b>@{{request.username_follower}} has sent you a follow request!</b></h2>
+		<form action="/respondtorequest" method="POST" enctype = "multipart/form-data">
+			<input type="radio" name = "followstatus" value = 'true'/> accept follow request? </br>
+			<input type="radio" name = "followstatus" value = 'false'/> deny follow request? </br>
+			<input type="submit" value = "Accept/Deny"/>
+		</form>
+
+    </div>
+{% endfor %}
+
+</body>
+</html>
