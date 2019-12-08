@@ -47,7 +47,7 @@ CREATE TABLE Likes (
 CREATE TABLE Tagged (
     username VARCHAR(20), 
     photoID int, 
-    tagstatus Boolean, 
+    tagstatus VARCHAR(20), 
     PRIMARY KEY(username, photoID), 
     FOREIGN KEY(username) REFERENCES Person(username),
     FOREIGN KEY(photoID)REFERENCES Photo(photoID)

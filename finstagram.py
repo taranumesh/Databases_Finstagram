@@ -440,8 +440,8 @@ def requests():
     cursor.execute(query, (username))
     data = cursor.fetchall()
     cursor = connection.cursor()
-    
     cursor.close()
+
     return render_template("requests.html", requests=data, message="")
 
 @app.route("/respondtorequest", methods=["POST"])
@@ -450,42 +450,29 @@ def follow_request():
     #I need response 
     response = request.form["followstatus"]
     followed = session["username"]
-    
-    #HERE'S THE ISSUE
-    #I NEED DISTINCT FOLLOWER VALUE TO DO QUERY IN IF...ELIF STATEMENTS
-    #
-    #
-    #
-    #
-    #
-    #
-    #
-    query = "SELECT username_follower FROM Follow WHERE username_followed = %s"
-    cursor = connection.cursor()
-    cursor.execute(query, (followed))
-    row = cursor.fetchone()
-    follower = row[0][username_follower]
+
+    # query = "SELECT username_follower FROM Follow WHERE username_followed = %s AND followstatus IS NULL"
+    # cursor = connection.cursor()
+    # cursor.execute(query, (followed))
+    # row = cursor.fetchone()
+    follower = request.form["follower"]
     
     if(response == 'true'):
-        query = "UPDATE Follow SET followstatus = 'true' WHERE username_followed=%s AND username_follower=%s"
+        query = "UPDATE Follow SET followstatus = 1 WHERE username_followed=%s AND username_follower=%s"
+        cursor = connection.cursor()
         cursor.execute(query, (followed, follower))
         connection.commit()
         cursor.close()
+        message = "You have accepted @" + follower + "'s follow request"
     elif(response == 'false'):
         query = "DELETE FROM Follow WHERE username_followed=%s AND username_follower=%s"
+        cursor = connection.cursor()
         cursor.execute(query, (followed, follower))
         connection.commit()
         cursor.close()
+        message = "You have denied @" + follower + "'s follow request"
 
-    cursor = connection.cursor()
-    username = session["username"]
-    query = "SELECT username_follower FROM Follow WHERE username_followed=%s AND followstatus IS NULL"
-    cursor.execute(query, (username))
-    data = cursor.fetchall()
-    cursor = connection.cursor()
-    
-    cursor.close()
-    return render_template("requests.html", requests=data, message="")
+    return render_template("requestsresponse.html", message=message)
 
 
 if __name__ == "__main__":

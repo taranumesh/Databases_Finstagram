@@ -12,6 +12,7 @@
 		<form action="/respondtorequest" method="POST" enctype = "multipart/form-data">
 			<input type="radio" name = "followstatus" value = 'true'/> accept follow request? </br>
 			<input type="radio" name = "followstatus" value = 'false'/> deny follow request? </br>
+			<input type="hidden" name = "follower" value = "{{request.username_follower}}">
 			<input type="submit" value = "Accept/Deny"/>
 		</form>
 
