@@ -9,18 +9,10 @@ import hashlib
 
 SALT = 'cs3083'
 
-#***
-# UPLOAD_FOLDER = '/Users/dannyalcedo/PycharmProjects/finstagram/uploads'
-# ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
-#**
-
 app = Flask(__name__)
 app.secret_key = "super secret key"
 
-#***
 IMAGES_DIR = os.path.join(os.getcwd(), "images")
-# app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-#***
 
 connection = pymysql.connect(host="localhost",
                              user="root",
@@ -80,8 +72,17 @@ def home():
     query = "DROP VIEW followerPhotos, myPhotos, groupPhotos"
     cursor.execute(query)
     cursor.close()
-    return render_template("home.html", username=session["username"], images=data, message="")
 
+    #Tagging: processing of query to select all posts the user has been tagged in to pass to home.html
+    cursor = connection.cursor()
+    query = "SELECT * FROM Photo WHERE EXISTS (SELECT photoID FROM Tagged WHERE username=%s AND tagstatus IS NULL AND Tagged.photoID=Photo.photoID)"
+    cursor.execute(query, (user))
+    images_tagged_data = cursor.fetchall()
+    cursor.close()
+
+    return render_template("home.html", username=session["username"], images=data, images_tagged=images_tagged_data, message="")
+
+#Tagging: route to manage input from "/tag" form in home.html
 @app.route("/tag", methods=["POST"])
 @login_required
 def tag():
@@ -89,42 +90,40 @@ def tag():
     tagger = session["username"]
     tagged = requestData["username"]
     photoid_form = requestData["photoID"]
-    print(photoid_form)
 
     cursor = connection.cursor()
     
-    if (tagged == tagger):
+    if (tagged == tagger): #self-tagging
         query = "INSERT INTO Tagged (username, photoID, tagstatus) VALUES (%s, %s, true)"
         cursor.execute(query, (tagger, photoid_form))
         cursor.close()
         message = "You've successfuly tagged yourself"
-    else:
-        #inner if...else to see if tagged can/can't see
-        #if photoid is in table made in "get all feed posts above" then vissible
+    else: #not self-tagging
         cursor = connection.cursor()
         followerPhotos = "CREATE VIEW followerPhotos AS SELECT DISTINCT PhotoID, file, photoPoster, caption, postingDate FROM Photo JOIN Follow ON (PhotoPoster=username_followed) WHERE username_follower=%s AND allFollowers='true'"
         cursor.execute(followerPhotos, (tagged))
         cursor.close()
 
-        # Get your own photos
+        # Get photos of person being tagged
         cursor = connection.cursor()
         myPhotos = "CREATE VIEW myPhotos AS SELECT PhotoID, file, photoPoster, caption, postingDate FROM Photo WHERE photoPoster=%s"
         cursor.execute(myPhotos, (tagged))
         cursor.close()
 
-        # Get photos from the group
+        # Get photos from the groups of person being tagged
         cursor = connection.cursor()
         groupPhotos = "CREATE VIEW groupPhotos AS SELECT DISTINCT PhotoID, file, photoPoster, caption, postingDate FROM Photo JOIN BelongTo as b1 ON (member_username = photoPoster) WHERE EXISTS (SELECT member_username FROM BelongTo WHERE groupName=b1.groupName AND member_username=%s)"
         cursor.execute(groupPhotos, (tagged))
         cursor.close()
 
-        # Get all feed posts
+        # Get all feed posts of person being tagged
         cursor = connection.cursor()
         query = "CREATE VIEW taggedFeed AS SELECT PhotoID FROM followerPhotos UNION (SELECT PhotoID FROM myPhotos) UNION (SELECT PhotoID FROM groupPhotos) ORDER BY PhotoID DESC"
         cursor.execute(query)
         photos = cursor.fetchall()
         cursor.close()
 
+        # Select the photo the person is being tagged in 
         cursor = connection.cursor()
         query = "SELECT * FROM taggedFeed WHERE PhotoID = %s"
         cursor.execute(query, (photoid_form))
@@ -137,84 +136,49 @@ def tag():
         cursor.execute(query)
         cursor.close()
 
-        if (photo == None):
+        if (photo == None): #If photo IS NOT viewable by person being tagged
             message = "User could not be tagged"
-        else:
+        else: #If photo IS viewable by person being tagged, insert data into tagged
             cursor = connection.cursor()
             query = "INSERT INTO Tagged (username, photoID, tagstatus) VALUES (%s, %s, NULL)"
-            print(photoid_form)
-            print(type(photoid_form))
             cursor.execute(query, (tagged, photoid_form))
             cursor.close()
-            #set message to success
             message = "User was successfuly tagged"
-            return render_template("tagresult.html", message=message)
-
-        # for photo in photos:
-        #     print(photo["PhotoID"])
-        #     print(photoid_form)
-
-        #     ##testing
-        #     print(type(photoid_form))
-        #     print(type(photo["PhotoID"]))
-
-        #     if (type(photoid_form) == int):
-        #         print("photoid_form is a int")
-        #     else:
-        #         print("photoid_form is NOT a int")
-
-        #     if (type(photo["PhotoID"]) == int):
-        #         print("photo['PhotoID'] is a int")
-        #     else:
-        #         print("photo['PhotoID'] is NOT a int")
-        #     ##testing
-
-        #     if (photo["PhotoID"] == photoid_form):
-        #         print("in right if")
-        #         #update table
-        #         cursor = connection.cursor()
-        #         query = "INSERT INTO Tagged (username, photoID, tagstatus) VALUES (%s, %s, NULL)"
-        #         cursor.execute(query, (username, photoid_form))
-        #         cursor.close()
-        #         #set message to success
-        #         message = "User was successfuly tagged"
-        #         return render_template("tagresult.html", message=message)
-        #     else:
-        #         print("in wrong else")
-        #         #set message to error  
-        #         message = "User could not be tagged"              
-
-    #resulting page from tag form
-    # self-tagging: 
-    # tagging where tagged sees
-    # tagging where tagged can't see
+            return render_template("tagresult.html", message=message) #display message to user depending on result
+    
     return render_template("tagresult.html", message=message)
+
+#Tagging: route to manage tags (user can accept or deny being tagged in a photo)
+#specifcally via /managetags form in home.html
+@app.route("/managetags", methods=["POST"])
+@login_required
+def manage_tags():
+    requestData = request.form
+    username = session["username"]
+    photoid_form = requestData["photoID"]
+    response = requestData["allow"]
+
+    if (response == "true"): #if person accepts tag, update tagstatus value in Tagged table
+        cursor = connection.cursor()
+        query = "UPDATE Tagged SET tagstatus=true WHERE username=%s AND photoID=%s"
+        cursor.execute(query, (username, photoid_form))
+        connection.commit()
+        cursor.close()
+        message = "You'be been tagged!"
+    else: #if person denies tag, delete status request from Tagged table
+        cursor = connection.cursor()
+        query = "DELETE FROM Tagged WHERE username=%s AND photoID=%s"        
+        cursor.execute(query, (username, photoid_form))
+        connection.commit()
+        cursor.close()
+        message = "You've denied being tagged from this photo"
+    
+    return render_template("manageTagsResult.html", message=message) #display message to user depending on result
 
 @app.route("/upload", methods=["GET"])
 @login_required
 def upload():
     return render_template("upload.html")
-
-# @app.route("/images", methods=["GET"])
-# @login_required
-# def images():
-	# user = session["username"]
-	# cursor = connection.cursor()
-	# followerPhotos = "CREATE VIEW follower_photos AS SELECT photoID, photoPoster FROM Photo JOIN Follow ON (PhotoPoster=username_followed) WHERE username_follower=%s AND allFollowers=1 ORDER BY timestamp DESC"
-	# cursor.execute(followerPhotos, (user))
-	# data = cursor.fetchall()
-	# cursor.close()
-
-	# cursor.conn.cursor()
-	# dropview = "DROP VIEW follower_photos"
-	# cursor.execute(dropview)
-	# cursor.close()
-
-	# return render_template("images.html", images=data)
-    # query = "SELECT * FROM photo"
-    # with connection.cursor() as cursor:
-    #     cursor.execute(query)
-    # data = cursor.fetchall()
 
 @app.route("/image/<image_name>", methods=["GET"])
 def image(image_name):
@@ -414,6 +378,7 @@ def follow_unfollow():
                     cursor = connection.cursor()
                     query = "INSERT INTO Follow (username_followed, username_follower, followstatus) VALUES (%s, %s, NULL)"
                     cursor.execute(query, (follow_user, username))
+                    connection.commit()
                     cursor.close()
                     message = "Follow request sent to @"+follow_user
                 else:
@@ -422,6 +387,7 @@ def follow_unfollow():
                 cursor = connection.cursor()
                 query = "DELETE FROM Follow WHERE username_followed=%s AND username_follower=%s"
                 cursor.execute(query, (follow_user, username))
+                connection.commit()
                 cursor.close()
                 message = "Unfollowed @"+follow_user
         else:
@@ -447,14 +413,8 @@ def requests():
 @app.route("/respondtorequest", methods=["POST"])
 @login_required
 def follow_request():
-    #I need response 
     response = request.form["followstatus"]
     followed = session["username"]
-
-    # query = "SELECT username_follower FROM Follow WHERE username_followed = %s AND followstatus IS NULL"
-    # cursor = connection.cursor()
-    # cursor.execute(query, (followed))
-    # row = cursor.fetchone()
     follower = request.form["follower"]
     
     if(response == 'true'):

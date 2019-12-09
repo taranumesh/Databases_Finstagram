@@ -61,20 +61,49 @@
 		padding-right: 5px;
 	}
 
+	#Tags {
+		width: 66%;
+		float: right;
+		padding-left: 5px;
+		padding-right: 5px;
+	}
+
 </style>
 
 <div id="Feed">
 <h2>Feed</h2>
+
 
 {% for image in images %}
 	<div id="Post">        
 		<h4><b>@{{image.photoPoster}}</b> <i>{{image.caption}}</i></h4>
         <h6>PhotoID: {{image.PhotoID}} </h6>
         <h6>{{image.postingDate}}</h6>
+
+        <! Tagging: Form to tag user in a photo>
         <form action="/tag" method="POST" enctype = "multipart/form-data">
 			<input type="text" name = "username" placeholder = "tag someone" required/> </br>
 			<input type="hidden" name="photoID" value="{{image.PhotoID}}">
 			<input type="submit" value = "tag"/>
+		</form>
+    </div>
+{% endfor %}
+</div>
+
+<! Tagging: Display each post user has been tagged in and give form to accept or deny tag>
+<div id="Tags">
+<h2>Tag Requests</h2>
+
+{% for image in images_tagged %}
+	<div id="tag_requests">        
+		<h4><b>@{{image.photoPoster}}</b> <i>{{image.caption}}</i></h4>
+        <h6>PhotoID: {{image.photoID}} </h6>
+        <h6>{{image.postingDate}}</h6>
+        <form action="/managetags" method="POST" enctype = "multipart/form-data">
+		<input type="radio" name="allow" value="true"/> Accept Tag </br>
+		<input type="radio" name="allow" value="false"/> Deny Tag </br>	
+		<input type="hidden" name="photoID" value="{{image.photoID}}">		
+		<input type="submit" value = "Accept/Deny Tag"/>
 		</form>
     </div>
 {% endfor %}
