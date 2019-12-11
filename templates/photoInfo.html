@@ -1,0 +1,36 @@
+<html>
+<head>
+</head>
+<body>
+<a href="/home">Home</a>
+
+<h1> Photo Info </h1>
+
+<style type="text/css">
+	img {
+		width: 300px;
+	}
+</style>
+
+<img src="/image/{{image.file}}"/>
+
+<h2> Poster: <i>{{names.firstName}} {{names.lastName}}</i></h2>
+
+<h2> Timestamp: {{image.postingdate}}</h2>
+
+<h2> <u>Users tagged in the photo</u></h2>
+<div id = 'Tags'>
+	{% for tag in tags %}
+		<h3>@{{tag.username}}: {{tag.firstName}} {{tag.lastName}}</h3>
+	{% endfor %}
+</div>
+
+<h2> <u>Users who liked this photo and their rating</u></h2>
+<div id = 'Likes'>
+	{% for like in likes %}
+		<h3>@{{like.username}}: {{like.rating}}</h3>
+	{% endfor %}
+</div>
+
+</body>
+</html>

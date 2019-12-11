@@ -44,7 +44,7 @@ def home():
     
     # Get photos from people you follow
     cursor = connection.cursor()
-    followerPhotos = "CREATE VIEW followerPhotos AS SELECT DISTINCT PhotoID, file, photoPoster, caption, postingDate FROM Photo JOIN Follow ON (PhotoPoster=username_followed) WHERE username_follower=%s AND allFollowers='true'"
+    followerPhotos = "CREATE VIEW followerPhotos AS SELECT DISTINCT PhotoID, file, photoPoster, caption, postingDate FROM Photo JOIN Follow ON (PhotoPoster=username_followed) WHERE followstatus=true AND username_follower=%s AND allFollowers='true'"
     cursor.execute(followerPhotos, (user))
     cursor.close()
 
@@ -92,58 +92,77 @@ def tag():
     photoid_form = requestData["photoID"]
 
     cursor = connection.cursor()
+    query = "SELECT username, tagstatus from Tagged"
+    cursor.execute(query)
+    usernames = cursor.fetchall()
+    cursor.close()
+
+    print(usernames[0]["username"])
     
+    length_test = len(usernames)
+
+    exists = False
+
+    for i in range(length_test):
+        print("in for loop usernames[i][username]:", usernames[i]["username"])
+        print("in for loop tagged:", tagged)
+        if (usernames[i]["username"] == tagged): #person is already tagged and you want to go to elif
+            exists = True
+
     if (tagged == tagger): #self-tagging
+        cursor = connection.cursor()
         query = "INSERT INTO Tagged (username, photoID, tagstatus) VALUES (%s, %s, true)"
         cursor.execute(query, (tagger, photoid_form))
         cursor.close()
         message = "You've successfuly tagged yourself"
+    elif (exists): #tagging someone already tagged or person hasn't accepted tag request
+        message = "This person could not be tagged"
     else: #not self-tagging
         cursor = connection.cursor()
-        followerPhotos = "CREATE VIEW followerPhotos AS SELECT DISTINCT PhotoID, file, photoPoster, caption, postingDate FROM Photo JOIN Follow ON (PhotoPoster=username_followed) WHERE username_follower=%s AND allFollowers='true'"
+        followerPhotos = "CREATE VIEW followerPhotos AS SELECT DISTINCT photoID, file, photoPoster, caption, postingDate FROM Photo JOIN Follow ON (PhotoPoster=username_followed) WHERE username_follower=%s AND allFollowers='true'"
         cursor.execute(followerPhotos, (tagged))
         cursor.close()
 
         # Get photos of person being tagged
         cursor = connection.cursor()
-        myPhotos = "CREATE VIEW myPhotos AS SELECT PhotoID, file, photoPoster, caption, postingDate FROM Photo WHERE photoPoster=%s"
+        myPhotos = "CREATE VIEW myPhotos AS SELECT photoID, file, photoPoster, caption, postingDate FROM Photo WHERE photoPoster=%s"
         cursor.execute(myPhotos, (tagged))
         cursor.close()
 
         # Get photos from the groups of person being tagged
         cursor = connection.cursor()
-        groupPhotos = "CREATE VIEW groupPhotos AS SELECT DISTINCT PhotoID, file, photoPoster, caption, postingDate FROM Photo JOIN BelongTo as b1 ON (member_username = photoPoster) WHERE EXISTS (SELECT member_username FROM BelongTo WHERE groupName=b1.groupName AND member_username=%s)"
+        groupPhotos = "CREATE VIEW groupPhotos AS SELECT DISTINCT photoID, file, photoPoster, caption, postingDate FROM Photo JOIN BelongTo as b1 ON (member_username = photoPoster) WHERE EXISTS (SELECT member_username FROM BelongTo WHERE groupName=b1.groupName AND member_username=%s)"
         cursor.execute(groupPhotos, (tagged))
         cursor.close()
 
         # Get all feed posts of person being tagged
         cursor = connection.cursor()
-        query = "CREATE VIEW taggedFeed AS SELECT PhotoID FROM followerPhotos UNION (SELECT PhotoID FROM myPhotos) UNION (SELECT PhotoID FROM groupPhotos) ORDER BY PhotoID DESC"
+        query = "CREATE VIEW taggedFeed AS SELECT photoID FROM followerPhotos UNION (SELECT photoID FROM myPhotos) UNION (SELECT photoID FROM groupPhotos) ORDER BY photoID DESC"
         cursor.execute(query)
         photos = cursor.fetchall()
         cursor.close()
 
         # Select the photo the person is being tagged in 
         cursor = connection.cursor()
-        query = "SELECT * FROM taggedFeed WHERE PhotoID = %s"
+        query = "SELECT * FROM taggedFeed WHERE photoID=%s"
         cursor.execute(query, (photoid_form))
         photo = cursor.fetchall()
         cursor.close()
 
-        # Drop all views
+        #Drop all views
         cursor = connection.cursor()
         query = "DROP VIEW followerPhotos, myPhotos, groupPhotos, taggedFeed"
         cursor.execute(query)
         cursor.close()
 
-        if (photo == None): #If photo IS NOT viewable by person being tagged
+        if (photo == ()): #If photo IS NOT viewable by person being tagged
             message = "User could not be tagged"
         else: #If photo IS viewable by person being tagged, insert data into tagged
             cursor = connection.cursor()
             query = "INSERT INTO Tagged (username, photoID, tagstatus) VALUES (%s, %s, NULL)"
             cursor.execute(query, (tagged, photoid_form))
             cursor.close()
-            message = "User was successfuly tagged"
+            message = "Tag request was successfuly sent to user"
             return render_template("tagresult.html", message=message) #display message to user depending on result
     
     return render_template("tagresult.html", message=message)
@@ -174,6 +193,57 @@ def manage_tags():
         message = "You've denied being tagged from this photo"
     
     return render_template("manageTagsResult.html", message=message) #display message to user depending on result
+
+@app.route("/info", methods=["POST"])
+@login_required
+def photo_info():
+    username = session["username"]
+    requestData = request.form
+    photoID_form = requestData["photoIDinfo"]
+    photoPoster_form = requestData["photoPoster"]
+
+    #getting photo info from Photo table ()
+    cursor = connection.cursor()
+    query = "SELECT * FROM Photo WHERE photoID=%s"
+    cursor.execute(query, (photoID_form))
+    get_photo = cursor.fetchone()
+    cursor.close()
+
+    #get first and last name of poster from Person table
+    cursor = connection.cursor()
+    query = "SELECT firstName, lastName FROM Person WHERE username=%s"
+    cursor.execute(query, (photoPoster_form))
+    get_names = cursor.fetchone()
+    cursor.close()
+
+    #get username and first/last name of people tagged
+    #create view of people tagged 
+    cursor = connection.cursor()
+    query = "CREATE VIEW taggedPeople AS SELECT username FROM Tagged WHERE photoID=%s AND tagstatus=true"
+    cursor.execute(query, (photoID_form))
+    cursor.close()
+    #use username in taggedPeople table to get Person info
+    cursor = connection.cursor()
+    query = "SELECT * FROM Person WHERE EXISTS (SELECT username from taggedPeople WHERE taggedPeople.username=Person.username)"
+    cursor.execute(query)
+    get_tagged = cursor.fetchall()
+    cursor.close
+
+    # Drop all views
+    cursor = connection.cursor()
+    query = "DROP VIEW taggedPeople"
+    cursor.execute(query)
+    cursor.close()
+
+    #get username and rating from Likes table of people who liked photo 
+    cursor = connection.cursor()
+    query = "SELECT username, rating FROM Likes WHERE photoID=%s"
+    cursor.execute(query, (photoID_form))
+    get_likes = cursor.fetchall()
+    cursor.close()
+
+    return render_template("photoInfo.html", image=get_photo, names=get_names, tags=get_tagged, likes=get_likes)
+
 
 @app.route("/upload", methods=["GET"])
 @login_required
@@ -250,24 +320,24 @@ def upload_image():
         image_name = image_file.filename
         filepath = os.path.join(IMAGES_DIR, image_name)
         image_file.save(filepath)
-        with open(filepath, 'rb') as file:
-        	binaryData = file.read()
+        # with open(filepath, 'rb') as file:
+        # 	binaryData = file.read()
         caption = request.form["caption"]
         allfollowers = request.form["allFollowers"]
         photoPoster = session["username"]
         
         # Get the last posted PhotoID and increment
         cursor = connection.cursor()
-        cursor.execute("SELECT MAX(PhotoID) FROM Photo")
+        cursor.execute("SELECT MAX(photoID) FROM Photo")
         photoID_max = cursor.fetchall()
-        if (photoID_max[0]["MAX(PhotoID)"] != None):
-            photoID = photoID_max[0]["MAX(PhotoID)"] + 1
+        if (photoID_max[0]["MAX(photoID)"] != None):
+            photoID = photoID_max[0]["MAX(photoID)"] + 1
         else:
             photoID = 1;
         cursor.close()
-        query = "INSERT INTO photo (PhotoID, postingDate, file, allFollowers, caption, photoPoster) VALUES (%s, %s, %s, %s, %s, %s)"
+        query = "INSERT INTO photo (photoID, postingDate, file, allFollowers, caption, photoPoster) VALUES (%s, %s, %s, %s, %s, %s)"
         with connection.cursor() as cursor:
-            cursor.execute(query, (photoID, time.strftime('%Y-%m-%d %H:%M:%S'), binaryData, allfollowers, caption, photoPoster))
+            cursor.execute(query, (photoID, time.strftime('%Y-%m-%d %H:%M:%S'), image_name, allfollowers, caption, photoPoster))
         message = "Image has been successfully uploaded."
         return render_template("upload.html", message=message)
 
@@ -282,7 +352,7 @@ def search_user():
         requestData = request.form
         username = requestData["searchbar"]
         cursor = connection.cursor()
-        userPhotos = "SELECT PhotoID, file, photoPoster, caption, postingDate FROM Photo WHERE photoPoster=%s AND allFollowers='true' ORDER BY postingDate DESC"
+        userPhotos = "SELECT photoID, file, photoPoster, caption, postingDate FROM Photo WHERE photoPoster=%s AND allFollowers='true' ORDER BY postingDate DESC"
         cursor.execute(userPhotos, (username))
         data = cursor.fetchall()
         cursor.close()
@@ -339,16 +409,36 @@ def add_user():
         group = "SELECT * FROM FriendGroup WHERE groupName=%s AND groupOwner=%s"
         cursor = connection.cursor()
         cursor.execute(group, (groupname, username))
-        data = cursor.fetchone()
+        group_exists = cursor.fetchone()
         cursor.close()
-        if data:
+        # print("Group is "+group_exists)
+
+        user = "SELECT * FROM Person WHERE username=%s"
+        cursor = connection.cursor()
+        cursor.execute(user, (adduser))
+        user_exists = cursor.fetchone()
+        cursor.close()
+        # print("User is "+user_exists)
+
+        user_already = "SELECT * FROM BelongTo WHERE member_username=%s AND groupName=%s"
+        cursor = connection.cursor()
+        cursor.execute(user_already, (adduser, groupname))
+        user_already_group = cursor.fetchone()
+        cursor.close()
+
+        # print("User Already is "+user_already_group)
+
+        if (group_exists is not None) and (user_exists is not None) and (user_already_group is None):
             message = "User "+adduser+" Added to "+groupname
             addUser = "INSERT INTO BelongTo (member_username, owner_username, groupName) VALUES (%s,%s,%s)"
             cursor = connection.cursor()
             cursor.execute(addUser, (adduser, username, groupname))
             cursor.close()
         else:
-            message = "Group Does Not Exist"
+            if (user_already_group is not None):
+                message = "User already in group"
+            else:
+                message = "Group or User Does Not Exist"
     else:
         mesage = "Error occured creating group."
     return render_template("groups.html", message=message)
