@@ -524,6 +524,43 @@ def follow_request():
 
     return render_template("requestsresponse.html", message=message)
 
+@app.route("/comment", methods=["POST"])
+@login_required
+def comment():
+    if request.form:
+        cursor = connection.cursor()
+        commenter = session["username"]
+        photoID = request.form.get("photoID")
+        commentText = request.form.get("text")
+        query = 'INSERT INTO Comment(username, photoID, commentText) VALUES(%s, %s, %s)'
+        cursor.execute(query, (commenter, photoID, commentText))
+        connection.commit()
+        cursor.close()
+    return render_template("home.html")
+
+@app.route("/like", methods=["POST"])
+@login_required
+def like():
+    if request.form:
+        cursor = connection.cursor()
+        username = session["username"]
+        photoID = request.form.get("photoID")
+        query = "SELECT * FROM Likes WHERE username=%s AND photoID=%s"
+        cursor.execute(query, (username, photoID))
+        data = cursor.fetchone()
+        cursor.close()
+        if data:
+            message = "You've already liked this photo"
+        else:
+            message = "You liked the photo"
+            newLike = 'INSERT INTO Likes(username, photoID, liketime, rating) VALUES(%s, %s, %s, NULL)'
+            cursor = connection.cursor()
+            cursor.execute(newLike, (username, photoID, time.strftime('%Y-%m-%d %H:%M:%S')))
+            cursor.close()
+
+    else:
+        message = "Error occurred liking photo"
+    return render_template("home.html", message=message)
 
 if __name__ == "__main__":
     if not os.path.isdir("images"):

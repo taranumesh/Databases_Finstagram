@@ -85,6 +85,23 @@
         <h6>PhotoID: {{image.PhotoID}} </h6>
         <h6>{{image.postingDate}}</h6>
 
+        <!-- This will display the comments -->
+		{% if comments %}
+		<span class = "Comments">
+		<h7>Comments</h7>
+			{% for comment in comments if comment.photoID == image.photoID %}
+			<p>{{comment.username}} {{comment.commentText}}</p>
+			{% endfor %}
+		</span>
+		{% endif %}
+
+		<!-- This will display whether or not a user has liked a photo or not -->
+		{% if likes %}
+			{% for like in likes if like.photoID == image.photoID %}
+			<p>You liked this photo</p>
+			{% endfor %}
+		{% endif %}
+
         <!-- Tagging: Form to tag user in a photo-->
         <form action="/tag" method="POST" enctype = "multipart/form-data">
 			<input type="text" name = "username" placeholder = "tag someone" required/> </br>
@@ -92,6 +109,23 @@
 			<input type="submit" value = "tag"/>
 		</form>
 		<br />
+
+		<!-- Liking: Form to like a photo-->
+		<form action="/like" method="POST" enctype = "multipart/form-data">
+			<input type = "hidden" name = "photoID" value="{{image.PhotoID}}">
+			<input type = "submit" value="like"/>
+		</form>
+		<br />
+
+		<!-- Commenting: Form to comment on a photo -->
+        <form action="/comment" method="POST" enctype = "multipart/form-data">
+			<input type="text" name = "text" placeholder = "Comment" required/> </br>
+			<input type="hidden" name="photoID" value="{{image.PhotoID}}">
+			<input type="submit" value = "comment"/>
+		</form>
+		<br />
+
+		<!-- Info Page: Form to pass info onto info page-->
 		<form action="/info" method="POST" enctype = "multipart/form-data">
 			<input type="hidden" name="photoIDinfo" value="{{image.PhotoID}}">
 			<input type="hidden" name="photoPoster" value="{{image.photoPoster}}">
