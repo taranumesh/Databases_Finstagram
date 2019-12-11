@@ -85,7 +85,7 @@
         <h6>PhotoID: {{image.PhotoID}} </h6>
         <h6>{{image.postingDate}}</h6>
 
-        <! Tagging: Form to tag user in a photo>
+        <!-- Tagging: Form to tag user in a photo-->
         <form action="/tag" method="POST" enctype = "multipart/form-data">
 			<input type="text" name = "username" placeholder = "tag someone" required/> </br>
 			<input type="hidden" name="photoID" value="{{image.PhotoID}}">
@@ -103,7 +103,7 @@
 {% endfor %}
 </div>
 
-<! Tagging: Display each post user has been tagged in and give form to accept or deny tag>
+<!--Tagging: Display each post user has been tagged in and give form to accept or deny tag-->
 <div id="Tags">
 <h2>Tag Requests</h2>
 

@@ -92,12 +92,12 @@ def tag():
     photoid_form = requestData["photoID"]
 
     cursor = connection.cursor()
-    query = "SELECT username, tagstatus from Tagged"
-    cursor.execute(query)
+    query = "SELECT username, tagstatus from Tagged WHERE photoID=%s"
+    cursor.execute(query, (photoid_form))
     usernames = cursor.fetchall()
     cursor.close()
 
-    print(usernames[0]["username"])
+    # print(usernames[0]["username"])
     
     length_test = len(usernames)
 
