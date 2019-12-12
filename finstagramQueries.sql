@@ -83,3 +83,13 @@ CREATE TABLE Follow (
     FOREIGN KEY(username_followed) REFERENCES Person(username),
     FOREIGN KEY(username_follower) REFERENCES Person(username)
 );
+
+
+CREATE TABLE Comment(
+    username VARCHAR(20),
+    photoID int,
+    commentText VARCHAR(1000),
+    PRIMARY KEY (photoID, username),
+    FOREIGN KEY (photoID) REFERENCES Photo(photoID),
+    FOREIGN KEY (username) REFERENCES Person(username)
+);
