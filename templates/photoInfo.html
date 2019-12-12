@@ -32,5 +32,12 @@
 	{% endfor %}
 </div>
 
+<h3> <u>Users who commented on this photo and their comment</u></h3>
+<div id = 'Comments'>
+	{% for comment in comments %}
+		<h3>@{{comment.username}}: {{comment.commentText}}</h3>
+	{% endfor %}
+</div>
+
 </body>
 </html>

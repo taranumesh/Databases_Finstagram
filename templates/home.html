@@ -85,15 +85,6 @@
         <h6>PhotoID: {{image.PhotoID}} </h6>
         <h6>{{image.postingDate}}</h6>
 
-        <!-- This will display the comments -->
-		{% if comments %}
-		<span class = "Comments">
-		<h7>Comments</h7>
-			{% for comment in comments if comment.photoID == image.photoID %}
-			<p>{{comment.username}} {{comment.commentText}}</p>
-			{% endfor %}
-		</span>
-		{% endif %}
 
 		<!-- This will display whether or not a user has liked a photo or not -->
 		{% if likes %}
